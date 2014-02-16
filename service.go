@@ -45,23 +45,28 @@ func NewService(namespace string, client *etcd.Client, address string, routes Ro
 		handler:   handler}
 }
 
+// Id returns the UUID that identifies this service.
+func (service *Service) Id() string {
+	return service.id
+}
+
 // Notify registers this service with etcd.
 func (service *Service) Notify() (*ServiceRecord, error) {
 	key := service.namespace + "/" + service.id
-	entry := ServiceRecord{
+	record := ServiceRecord{
 		Id:      service.id,
 		Address: service.address,
 		Routes:  service.routes}
-	entryJSON, err := json.Marshal(entry)
+	recordJSON, err := json.Marshal(record)
 	if err != nil {
 		return nil, err
 	}
-	value := bytes.NewBuffer(entryJSON).String()
+	value := bytes.NewBuffer(recordJSON).String()
 	_, err = service.client.Set(key, value, 0)
 	if err != nil {
 		return nil, err
 	}
-	return &entry, nil
+	return &record, nil
 }
 
 // // Register the service and listen for connections.

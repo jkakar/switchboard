@@ -25,8 +25,8 @@ func NewExchange(namespace string, client *etcd.Client) *Exchange {
 	return &Exchange{namespace: namespace, client: client}
 }
 
-// ServiceManifest returns information about the currently registered
-// services.
+// ServiceManifest returns information from etcd about the currently
+// registered services.
 func (exchange *Exchange) ServiceManifest() (*ServiceManifest, error) {
 	sort := false
 	recursive := true
@@ -47,7 +47,12 @@ func (exchange *Exchange) ServiceManifest() (*ServiceManifest, error) {
 	return manifest, nil
 }
 
-// Watch for service changes.
-func (exchange *Exchange) Watch(stop chan bool) error {
+// Watch for updates in etcd and send new service manifests to the update
+// channel.  Send on the stop channel to discontinue watching.
+func (exchange *Exchange) Watch(update chan *ServiceManifest, stop <-chan bool) error {
+	select {
+	case <-stop:
+		break
+	}
 	return nil
 }
