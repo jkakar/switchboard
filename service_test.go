@@ -1,10 +1,9 @@
-package sb_test
+package sb
 
 import (
 	"bytes"
 	"encoding/json"
 	"github.com/coreos/go-etcd/etcd"
-	"github.com/jkakar/switchboard"
 	. "launchpad.net/gocheck"
 	"net/http"
 )
@@ -24,12 +23,12 @@ func (s *ServiceTest) SetUpTest(c *C) {
 // in etcd.
 func (s *ServiceTest) TestNotify(c *C) {
 	address := "http://localhost:8080"
-	routes := make(sb.Routes)
+	routes := make(Routes)
 	handler := http.HandlerFunc(func(http.ResponseWriter, *http.Request) {})
-	service := sb.NewService("test", s.client, address, routes, handler)
+	service := NewService("test", s.client, address, routes, handler)
 	record, err := service.Notify()
 
-	key := "test/" + service.Id()
+	key := "test/" + service.ID()
 	response, err := s.client.Get(key, false, true)
 	c.Assert(err, IsNil)
 	recordJSON, _ := json.Marshal(record)

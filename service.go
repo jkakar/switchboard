@@ -12,12 +12,13 @@ import (
 	// "time"
 )
 
-// Map HTTP methods to URLs.
+// Routes maps HTTP methods to URLs.
 type Routes map[string][]string
 
-// The representation of a service stored in etcd and used by exchanges.
+// ServiceRecord is a representation of a service stored in etcd and used by
+// exchanges.
 type ServiceRecord struct {
-	Id      string `json:"id"`
+	ID      string `json:"id"`
 	Address string `json:"address"`
 	Routes  Routes `json:"routes"`
 }
@@ -45,8 +46,8 @@ func NewService(namespace string, client *etcd.Client, address string, routes Ro
 		handler:   handler}
 }
 
-// Id returns the UUID that identifies this service.
-func (service *Service) Id() string {
+// ID returns the UUID that identifies this service.
+func (service *Service) ID() string {
 	return service.id
 }
 
@@ -54,7 +55,7 @@ func (service *Service) Id() string {
 func (service *Service) Notify() (*ServiceRecord, error) {
 	key := service.namespace + "/" + service.id
 	record := ServiceRecord{
-		Id:      service.id,
+		ID:      service.id,
 		Address: service.address,
 		Routes:  service.routes}
 	recordJSON, err := json.Marshal(record)

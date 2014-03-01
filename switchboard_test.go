@@ -1,4 +1,4 @@
-package sb_test
+package sb
 
 import (
 	gc "launchpad.net/gocheck"

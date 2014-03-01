@@ -6,7 +6,7 @@ import (
 	"github.com/coreos/go-etcd/etcd"
 )
 
-// A representation of services registered with an exchange.
+// ServiceManifest is a representation of services registered with an exchange.
 type ServiceManifest struct {
 	Services []*ServiceRecord
 	index    uint64
@@ -35,24 +35,37 @@ func (exchange *Exchange) ServiceManifest() (*ServiceManifest, error) {
 		return nil, err
 	}
 
+	return exchange.buildManifest(response), nil
+}
+
+// buildManifest reads a response from etcd and converts it to a service
+// manifest.
+func (exchange *Exchange) buildManifest(response *etcd.Response) *ServiceManifest {
 	serviceRecords := []*ServiceRecord{}
 	for _, node := range response.Node.Nodes {
 		var serviceRecord ServiceRecord
 		json.Unmarshal(bytes.NewBufferString(node.Value).Bytes(), &serviceRecord)
 		serviceRecords = append(serviceRecords, &serviceRecord)
 	}
-	manifest := &ServiceManifest{
+	return &ServiceManifest{
 		Services: serviceRecords,
 		index:    response.EtcdIndex}
-	return manifest, nil
 }
 
-// Watch for updates in etcd and send new service manifests to the update
-// channel.  Send on the stop channel to discontinue watching.
-func (exchange *Exchange) Watch(update chan *ServiceManifest, stop <-chan bool) error {
+// Watch for updates in etcd and send new service manifests to the watcher
+// channel.  Send on the stop channel to stop watching.
+func (exchange *Exchange) Watch(watcher chan *ServiceManifest, stop chan bool) (err error) {
+	receiver := make(chan *etcd.Response)
+	stopped := make(chan bool)
+	go func() {
+		_, err = exchange.client.Watch(exchange.namespace, 0, true, receiver, stop)
+		stopped <- true
+	}()
 	select {
-	case <-stop:
-		break
+	case response := <-receiver:
+		watcher <- exchange.buildManifest(response)
+	case <-stopped:
+		return nil
 	}
-	return nil
+	return err
 }
