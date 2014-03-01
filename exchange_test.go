@@ -1,4 +1,4 @@
-package sb
+package switchboard
 
 import (
 	"github.com/coreos/go-etcd/etcd"

@@ -1,4 +1,4 @@
-package sb
+package switchboard
 
 import (
 	gc "launchpad.net/gocheck"
