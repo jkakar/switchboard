@@ -2,14 +2,11 @@ package switchboard
 
 import (
 	"bytes"
-	"code.google.com/p/go-uuid/uuid"
 	"encoding/json"
-	"github.com/coreos/go-etcd/etcd"
-	// "log"
 	"net/http"
-	// "os"
-	// "os/signal"
-	// "time"
+
+	"code.google.com/p/go-uuid/uuid"
+	"github.com/coreos/go-etcd/etcd"
 )
 
 // Routes maps HTTP methods to URLs.
