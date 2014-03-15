@@ -3,9 +3,10 @@ package switchboard
 import (
 	"bytes"
 	"encoding/json"
+	"net/http"
+
 	"github.com/coreos/go-etcd/etcd"
 	. "launchpad.net/gocheck"
-	"net/http"
 )
 
 type ServiceTest struct {
@@ -23,7 +24,7 @@ func (s *ServiceTest) SetUpTest(c *C) {
 // in etcd.
 func (s *ServiceTest) TestNotify(c *C) {
 	address := "http://localhost:8080"
-	routes := make(Routes)
+	routes := Routes{"GET": []string{"/users", "/user/:id"}}
 	handler := http.HandlerFunc(func(http.ResponseWriter, *http.Request) {})
 	service := NewService("test", s.client, address, routes, handler)
 	record, err := service.Notify()
