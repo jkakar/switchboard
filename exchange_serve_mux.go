@@ -71,7 +71,7 @@ func (mux *ExchangeServeMux) ServeHTTP(writer http.ResponseWriter, request *http
 			address := addresses[index]
 			url := address + request.URL.Path
 			if len(request.URL.Query()) > 0 {
-				url = url + "?" + request.URL.Query().Encode()
+				url = url + "?" + request.URL.RawQuery
 			}
 			innerRequest, err := http.NewRequest(request.Method, url, request.Body)
 			if err != nil {

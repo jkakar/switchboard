@@ -45,7 +45,7 @@ func (s *ExchangeServeMuxTest) TestServeHTTPWithStaticRoute(c *C) {
 // backends.
 func (s *ExchangeServeMuxTest) TestServeHTTPWithQueryString(c *C) {
 	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		fmt.Fprintln(w, r.URL.Query().Encode())
+		fmt.Fprintln(w, r.URL.RawQuery)
 	})
 	server := httptest.NewServer(handler)
 	defer server.Close()
