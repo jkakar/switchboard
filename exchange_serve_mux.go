@@ -32,7 +32,7 @@ func NewExchangeServeMux() *ExchangeServeMux {
 
 // Add registers the address as a backend service for the given HTTP method
 // and URL pattern.
-func (mux *ExchangeServeMux) Add(method string, pattern string, address string) {
+func (mux *ExchangeServeMux) Add(method, pattern, address string) {
 	mux.rw.Lock()
 	defer mux.rw.Unlock()
 
@@ -51,7 +51,7 @@ func (mux *ExchangeServeMux) Add(method string, pattern string, address string) 
 
 // Add deregisters the address as a backend service for the given HTTP method
 // and URL pattern.
-func (mux *ExchangeServeMux) Remove(method string, pattern string, address string) {
+func (mux *ExchangeServeMux) Remove(method, pattern, address string) {
 	mux.rw.Lock()
 	defer mux.rw.Unlock()
 }
@@ -78,6 +78,11 @@ func (mux *ExchangeServeMux) ServeHTTP(writer http.ResponseWriter, request *http
 				writer.WriteHeader(http.StatusInternalServerError)
 				return
 			}
+			for header, values := range request.Header {
+				for _, value := range values {
+					innerRequest.Header.Add(header, value)
+				}
+			}
 			response, err := http.DefaultClient.Do(innerRequest)
 			if err != nil {
 				writer.WriteHeader(http.StatusInternalServerError)
@@ -85,6 +90,11 @@ func (mux *ExchangeServeMux) ServeHTTP(writer http.ResponseWriter, request *http
 			}
 
 			// Relay the response from the backend service back to the client.
+			for header, values := range response.Header {
+				for _, value := range values {
+					writer.Header().Add(header, value)
+				}
+			}
 			writer.WriteHeader(response.StatusCode)
 			body := bytes.NewBufferString("")
 			body.ReadFrom(response.Body)
