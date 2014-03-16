@@ -14,11 +14,26 @@ var _ = Suite(&ExchangeServeMuxTest{})
 // ServeHTTP returns a 404 Not Found when no pattern matches the requested
 // route.
 func (s *ExchangeServeMuxTest) TestServeHTTPWithUnknownRoute(c *C) {
-	mux := NewExchangeServeMux()
 	writer := httptest.NewRecorder()
 	request, err := http.NewRequest("GET", "http://example.com/resource", nil)
 	c.Assert(err, IsNil)
 
+	mux := NewExchangeServeMux()
+	mux.ServeHTTP(writer, request)
+	c.Assert(writer.Code, Equals, http.StatusNotFound)
+}
+
+// ServeHTTP only proxies requests that match registered HTTP methods.
+func (s *ExchangeServeMuxTest) TestServeHTTPConsidersHTTPMethod(c *C) {
+	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {})
+	server := httptest.NewServer(handler)
+	defer server.Close()
+	writer := httptest.NewRecorder()
+	request, err := http.NewRequest("HEAD", "http://example.com/resource", nil)
+	c.Assert(err, IsNil)
+
+	mux := NewExchangeServeMux()
+	mux.Add("GET", "/resource", server.URL)
 	mux.ServeHTTP(writer, request)
 	c.Assert(writer.Code, Equals, http.StatusNotFound)
 }
@@ -90,4 +105,20 @@ func (s *ExchangeServeMuxTest) TestServeHTTPWithHeaders(c *C) {
 		"X-From-Service": []string{"Service"}})
 }
 
-// WithDynamicPath
+// ServeHTTP proxies requests to dynamic routes registered with Add.
+func (s *ExchangeServeMuxTest) TestServeHTTPWithDynamicRoute(c *C) {
+	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprintln(w, "Hello, world!")
+	})
+	server := httptest.NewServer(handler)
+	defer server.Close()
+	writer := httptest.NewRecorder()
+	request, err := http.NewRequest("GET", "http://example.com/resource/1", nil)
+	c.Assert(err, IsNil)
+
+	mux := NewExchangeServeMux()
+	mux.Add("GET", "/resource/:id", server.URL)
+	mux.ServeHTTP(writer, request)
+	c.Assert(writer.Code, Equals, http.StatusOK)
+	c.Assert(writer.Body.String(), Equals, "Hello, world!\n")
+}
