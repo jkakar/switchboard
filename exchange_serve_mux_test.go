@@ -122,3 +122,94 @@ func (s *ExchangeServeMuxTest) TestServeHTTPWithDynamicRoute(c *C) {
 	c.Assert(writer.Code, Equals, http.StatusOK)
 	c.Assert(writer.Body.String(), Equals, "Hello, world!\n")
 }
+
+// ServeHTTP proxies requests to dynamic routes registered with Add.
+func (s *ExchangeServeMuxTest) TestServeHTTPWithBestMatch(c *C) {
+	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprintln(w, "Hello, world!")
+	})
+	server := httptest.NewServer(handler)
+	defer server.Close()
+	writer := httptest.NewRecorder()
+	request, err := http.NewRequest("GET", "http://example.com/resource/1/2", nil)
+	c.Assert(err, IsNil)
+
+	mux := NewExchangeServeMux()
+	mux.Add("GET", "/resource/:one", "broken")
+	mux.Add("GET", "/resource/:one/:two", server.URL)
+	mux.ServeHTTP(writer, request)
+	c.Assert(writer.Code, Equals, http.StatusOK)
+	c.Assert(writer.Body.String(), Equals, "Hello, world!\n")
+}
+
+type PatternHandlerTest struct{}
+
+var _ = Suite(&PatternHandlerTest{})
+
+// Match matches paths to patterns that don't have a placeholder.
+func (s *PatternHandlerTest) TestMatchWithoutPlaceholder(c *C) {
+	handler := patternHandler{pattern: "/foo"}
+	c.Assert(handler.match("/foo"), Equals, true)
+	c.Assert(handler.match("/foo/bar"), Equals, false)
+}
+
+// Match matches paths to patterns that have a placeholder at then end of the
+// pattern.
+func (s *PatternHandlerTest) TestMatchWithPlaceholder(c *C) {
+	handler := patternHandler{pattern: "/foo/:name"}
+	c.Assert(handler.match("/foo/bar"), Equals, true)
+	c.Assert(handler.match("/foo"), Equals, false)
+}
+
+// Match matches paths to patterns that have a placeholder in the middle of
+// the pattern.
+func (s *PatternHandlerTest) TestMatchWithEmbeddedPlaceholder(c *C) {
+	handler := patternHandler{pattern: "/foo/:name/baz"}
+	c.Assert(handler.match("/foo/bar/baz"), Equals, true)
+}
+
+// Match matches paths to patterns that have multiple placeholders.
+func (s *PatternHandlerTest) TestMatchWithMultiplePlaceholders(c *C) {
+	handler := patternHandler{pattern: "/foo/:name/baz/:id"}
+	c.Assert(handler.match("/foo/bar/baz"), Equals, false)
+	c.Assert(handler.match("/foo/bar/baz/123"), Equals, true)
+}
+
+// Match matches paths to patterns that have multiple placeholders with the
+// same name.
+func (s *PatternHandlerTest) TestMatchWithDuplicatePlaceholders(c *C) {
+	handler := patternHandler{pattern: "/foo/:name/baz/:name"}
+	c.Assert(handler.match("/foo/bar/baz"), Equals, false)
+	c.Assert(handler.match("/foo/bar/baz/123"), Equals, true)
+}
+
+// Match matches paths to patterns that have placeholders with colons in their
+// name.
+func (s *PatternHandlerTest) TestMatchWithDoubleColonPlaceholder(c *C) {
+	handler := patternHandler{pattern: "/foo/::name"}
+	c.Assert(handler.match("/foo/bar"), Equals, true)
+}
+
+// Match matches paths to patterns that have placeholders with a constant
+// prefix string.
+func (s *PatternHandlerTest) TestMatchWithPrefixedPlaceholder(c *C) {
+	handler := patternHandler{pattern: "/foo/x:name"}
+	c.Assert(handler.match("/foo/xbar"), Equals, true)
+	c.Assert(handler.match("/foo/bar"), Equals, false)
+}
+
+// Match treats patterns that end in a trailing slash as ending in a splat.
+// That is, anything after the trailing slash in the path is considered a
+// match.
+func (s *PatternHandlerTest) TestMatchWithSplat(c *C) {
+	handler := patternHandler{pattern: "/foo/"}
+	c.Assert(handler.match("/foo/bar/baz"), Equals, true)
+	c.Assert(handler.match("/foo/bar"), Equals, true)
+}
+
+// Match matches paths to patterns that have placeholders and end in a splat.
+func (s *PatternHandlerTest) TestMatchWithPrefixAndSplat(c *C) {
+	handler := patternHandler{pattern: "/foo/:name/bar/"}
+	c.Assert(handler.match("/foo/name/bar/baz"), Equals, true)
+	c.Assert(handler.match("/foo/name/bar/baz/quux"), Equals, true)
+}

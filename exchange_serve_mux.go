@@ -13,13 +13,13 @@ import (
 // service that can respond to it and proxies the request to the appropriate
 // backend.
 type ExchangeServeMux struct {
-	rw     sync.RWMutex          // Synchronize access to routes map.
-	routes map[string][]*handler // Patterns mapped to backend services.
+	rw     sync.RWMutex                 // Synchronize access to routes map.
+	routes map[string][]*patternHandler // Patterns mapped to backend services.
 }
 
 // NewExchangeServeMux allocates and returns a new ExchangeServeMux.
 func NewExchangeServeMux() *ExchangeServeMux {
-	return &ExchangeServeMux{routes: make(map[string][]*handler)}
+	return &ExchangeServeMux{routes: make(map[string][]*patternHandler)}
 }
 
 // Add registers the address for a backend service as a handler for an HTTP
@@ -30,11 +30,11 @@ func (mux *ExchangeServeMux) Add(method, pattern, address string) {
 
 	handlers, ok := mux.routes[method]
 	if !ok {
-		handlers = make([]*handler, 0)
+		handlers = make([]*patternHandler, 0)
 	}
 
 	addresses := []string{address}
-	handler := handler{pattern: pattern, addresses: addresses}
+	handler := patternHandler{pattern: pattern, addresses: addresses}
 	mux.routes[method] = append(handlers, &handler)
 }
 
@@ -108,13 +108,13 @@ func (mux *ExchangeServeMux) match(request *http.Request) (*[]string, error) {
 
 // Handler keeps track of backend service addresses that are registered to
 // handle a URL pattern.
-type handler struct {
+type patternHandler struct {
 	pattern   string
 	addresses []string
 }
 
 // Match returns true if this handler is a match for path.
-func (handler *handler) match(path string) bool {
+func (handler *patternHandler) match(path string) bool {
 	var i, j int
 	for i < len(path) {
 		switch {
@@ -141,7 +141,7 @@ func (handler *handler) match(path string) bool {
 // Find searches text for char, starting at startIndex, and returns the index
 // of the next instance of char.  startIndex is returned if no instance of
 // char is found.
-func (handler *handler) find(text string, char byte, startIndex int) int {
+func (handler *patternHandler) find(text string, char byte, startIndex int) int {
 	j := startIndex
 	for j < len(text) && text[j] != char {
 		j++
