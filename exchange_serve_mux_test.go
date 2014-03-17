@@ -64,6 +64,49 @@ func (s *ExchangeServeMuxTest) TestAddMultiplePatterns(c *C) {
 	c.Assert(handlers[1].addresses, DeepEquals, []string{"http://example.com"})
 }
 
+// Remove is a effectively a no-op if the requested method doesn't exist.
+func (s *ExchangeServeMuxTest) TestRemoveWithoutMatchingMethod(c *C) {
+	mux := NewExchangeServeMux()
+	mux.Remove("GET", "/resource", "http://example.com")
+	c.Assert(len(mux.routes), Equals, 0)
+}
+
+// Remove removes a pattern handler when it no longer contains addresses.
+func (s *ExchangeServeMuxTest) TestRemovePatternHandler(c *C) {
+	mux := NewExchangeServeMux()
+	mux.Add("GET", "/resource", "http://example.com")
+	mux.Remove("GET", "/resource", "http://example.com")
+	c.Assert(len(mux.routes), Equals, 1)
+	handlers := mux.routes["GET"]
+	c.Assert(len(handlers), Equals, 0)
+}
+
+// Remove removes a registered address from a pattern handler.
+func (s *ExchangeServeMuxTest) TestRemoveFirstAddress(c *C) {
+	mux := NewExchangeServeMux()
+	mux.Add("GET", "/resource", "http://example.com:8080")
+	mux.Add("GET", "/resource", "http://example.com:8081")
+	mux.Remove("GET", "/resource", "http://example.com:8080")
+	c.Assert(len(mux.routes), Equals, 1)
+	handlers := mux.routes["GET"]
+	c.Assert(len(handlers), Equals, 1)
+	c.Assert(handlers[0].pattern, Equals, "/resource")
+	c.Assert(handlers[0].addresses, DeepEquals, []string{"http://example.com:8081"})
+}
+
+// Remove removes a registered address from a pattern handler.
+func (s *ExchangeServeMuxTest) TestRemoveLastAddress(c *C) {
+	mux := NewExchangeServeMux()
+	mux.Add("GET", "/resource", "http://example.com:8080")
+	mux.Add("GET", "/resource", "http://example.com:8081")
+	mux.Remove("GET", "/resource", "http://example.com:8081")
+	c.Assert(len(mux.routes), Equals, 1)
+	handlers := mux.routes["GET"]
+	c.Assert(len(handlers), Equals, 1)
+	c.Assert(handlers[0].pattern, Equals, "/resource")
+	c.Assert(handlers[0].addresses, DeepEquals, []string{"http://example.com:8080"})
+}
+
 // ServeHTTP returns a 404 Not Found when no pattern matches the requested
 // route.
 func (s *ExchangeServeMuxTest) TestServeHTTPWithUnknownRoute(c *C) {

@@ -22,7 +22,7 @@ func NewExchangeServeMux() *ExchangeServeMux {
 	return &ExchangeServeMux{routes: make(map[string][]*patternHandler)}
 }
 
-// Add registers the address for a backend service as a handler for an HTTP
+// Add registers the address of a backend service as a handler for an HTTP
 // method and URL pattern.
 func (mux *ExchangeServeMux) Add(method, pattern, address string) {
 	mux.rw.Lock()
@@ -56,11 +56,38 @@ func (mux *ExchangeServeMux) Add(method, pattern, address string) {
 	mux.routes[method] = append(handlers, &handler)
 }
 
-// Remove unregisters the address for a backend service as a handler for an
+// Remove unregisters the address of a backend service as a handler for an
 // HTTP method and URL pattern.
 func (mux *ExchangeServeMux) Remove(method, pattern, address string) {
 	mux.rw.Lock()
 	defer mux.rw.Unlock()
+
+	handlers, ok := mux.routes[method]
+	if !ok {
+		return
+	}
+
+	// Find the handler registered for the pattern.
+	for i, handler := range handlers {
+		if pattern == handler.pattern {
+			// Remove the handler if the address to remove is the only one
+			// registered.
+			if len(handler.addresses) == 1 && handler.addresses[0] == address {
+				mux.routes[method] = append(handlers[:i], handlers[i+1:]...)
+				return
+			}
+
+			// Remove the address from the addresses registered in the
+			// handler.
+			for j, existingAddress := range handler.addresses {
+				if address == existingAddress {
+					handler.addresses = append(
+						handler.addresses[:j], handler.addresses[j+1:]...)
+					return
+				}
+			}
+		}
+	}
 }
 
 // ServeHTTP dispatches the request to the backend service whose pattern most
