@@ -11,7 +11,7 @@ import (
 // ExchangeServeMux is an HTTP request multiplexer.  It matches the URL of
 // each incoming request against a list of registered patterns to find the
 // service that can respond to it and proxies the request to the appropriate
-// backend.
+// backend.  Pattern matching logic is based on pat.go.
 type ExchangeServeMux struct {
 	rw     sync.RWMutex                 // Synchronize access to routes map.
 	routes map[string][]*patternHandler // Patterns mapped to backend services.
