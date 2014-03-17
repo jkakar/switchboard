@@ -11,6 +11,59 @@ type ExchangeServeMuxTest struct{}
 
 var _ = Suite(&ExchangeServeMuxTest{})
 
+// Add registers a new method, pattern and address.  It creates data
+// structures as needed.
+func (s *ExchangeServeMuxTest) TestAdd(c *C) {
+	mux := NewExchangeServeMux()
+	mux.Add("GET", "/resource", "http://example.com")
+	c.Assert(len(mux.routes), Equals, 1)
+	handlers := mux.routes["GET"]
+	c.Assert(len(handlers), Equals, 1)
+	c.Assert(handlers[0].pattern, Equals, "/resource")
+	c.Assert(handlers[0].addresses, DeepEquals, []string{"http://example.com"})
+}
+
+// Add is a effectively a no-op if a duplicate method, pattern and address are
+// provided.
+func (s *ExchangeServeMuxTest) TestAddDuplicatePatternAndAddress(c *C) {
+	mux := NewExchangeServeMux()
+	mux.Add("GET", "/resource", "http://example.com")
+	mux.Add("GET", "/resource", "http://example.com")
+	c.Assert(len(mux.routes), Equals, 1)
+	handlers := mux.routes["GET"]
+	c.Assert(len(handlers), Equals, 1)
+	c.Assert(handlers[0].pattern, Equals, "/resource")
+	c.Assert(handlers[0].addresses, DeepEquals, []string{"http://example.com"})
+}
+
+// Add appends new addresses to an existing pattern handler registered for a
+// method and pattern.
+func (s *ExchangeServeMuxTest) TestAddAddressToExistingHandler(c *C) {
+	mux := NewExchangeServeMux()
+	mux.Add("GET", "/resource", "http://example.com:8080")
+	mux.Add("GET", "/resource", "http://example.com:8081")
+	c.Assert(len(mux.routes), Equals, 1)
+	handlers := mux.routes["GET"]
+	c.Assert(len(handlers), Equals, 1)
+	c.Assert(handlers[0].pattern, Equals, "/resource")
+	expected := []string{"http://example.com:8080", "http://example.com:8081"}
+	c.Assert(handlers[0].addresses, DeepEquals, expected)
+}
+
+// Add creates a new pattern handler for each new pattern.
+func (s *ExchangeServeMuxTest) TestAddMultiplePatterns(c *C) {
+	mux := NewExchangeServeMux()
+	mux.Add("GET", "/resource0", "http://example.com")
+	mux.Add("GET", "/resource1", "http://example.com")
+	c.Assert(len(mux.routes), Equals, 1)
+	handlers := mux.routes["GET"]
+	c.Assert(len(handlers), Equals, 2)
+	c.Assert(handlers[0].pattern, Equals, "/resource0")
+	c.Assert(handlers[0].addresses, DeepEquals, []string{"http://example.com"})
+	c.Assert(handlers[1].pattern, Equals, "/resource1")
+	c.Assert(handlers[1].addresses, DeepEquals, []string{"http://example.com"})
+}
+
 // ServeHTTP returns a 404 Not Found when no pattern matches the requested
 // route.
 func (s *ExchangeServeMuxTest) TestServeHTTPWithUnknownRoute(c *C) {

@@ -33,6 +33,24 @@ func (mux *ExchangeServeMux) Add(method, pattern, address string) {
 		handlers = make([]*patternHandler, 0)
 	}
 
+	// Search for duplicates.
+	for _, handler := range handlers {
+		if pattern == handler.pattern {
+			for _, existingAddress := range handler.addresses {
+				// Abort because the method, pattern and address is already
+				// registered.
+				if address == existingAddress {
+					return
+				}
+			}
+
+			// Add a new address to an existing pattern handler.
+			handler.addresses = append(handler.addresses, address)
+			return
+		}
+	}
+
+	// Add a new pattern handler for the pattern and address.
 	addresses := []string{address}
 	handler := patternHandler{pattern: pattern, addresses: addresses}
 	mux.routes[method] = append(handlers, &handler)
