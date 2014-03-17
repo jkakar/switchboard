@@ -143,7 +143,7 @@ func (mux *ExchangeServeMux) match(request *http.Request) (*[]string, error) {
 	handlers, ok := mux.routes[request.Method]
 	if ok {
 		for _, handler := range handlers {
-			if handler.match(request.URL.Path) {
+			if handler.Match(request.URL.Path) {
 				return &handler.addresses, nil
 			}
 		}
@@ -159,7 +159,7 @@ type patternHandler struct {
 }
 
 // Match returns true if this handler is a match for path.
-func (handler *patternHandler) match(path string) bool {
+func (handler *patternHandler) Match(path string) bool {
 	var i, j int
 	for i < len(path) {
 		switch {

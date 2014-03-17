@@ -245,53 +245,53 @@ var _ = Suite(&PatternHandlerTest{})
 // Match matches paths to patterns that don't have a placeholder.
 func (s *PatternHandlerTest) TestMatchWithoutPlaceholder(c *C) {
 	handler := patternHandler{pattern: "/foo"}
-	c.Assert(handler.match("/foo"), Equals, true)
-	c.Assert(handler.match("/foo/bar"), Equals, false)
+	c.Assert(handler.Match("/foo"), Equals, true)
+	c.Assert(handler.Match("/foo/bar"), Equals, false)
 }
 
 // Match matches paths to patterns that have a placeholder at then end of the
 // pattern.
 func (s *PatternHandlerTest) TestMatchWithPlaceholder(c *C) {
 	handler := patternHandler{pattern: "/foo/:name"}
-	c.Assert(handler.match("/foo/bar"), Equals, true)
-	c.Assert(handler.match("/foo"), Equals, false)
+	c.Assert(handler.Match("/foo/bar"), Equals, true)
+	c.Assert(handler.Match("/foo"), Equals, false)
 }
 
 // Match matches paths to patterns that have a placeholder in the middle of
 // the pattern.
 func (s *PatternHandlerTest) TestMatchWithEmbeddedPlaceholder(c *C) {
 	handler := patternHandler{pattern: "/foo/:name/baz"}
-	c.Assert(handler.match("/foo/bar/baz"), Equals, true)
+	c.Assert(handler.Match("/foo/bar/baz"), Equals, true)
 }
 
 // Match matches paths to patterns that have multiple placeholders.
 func (s *PatternHandlerTest) TestMatchWithMultiplePlaceholders(c *C) {
 	handler := patternHandler{pattern: "/foo/:name/baz/:id"}
-	c.Assert(handler.match("/foo/bar/baz"), Equals, false)
-	c.Assert(handler.match("/foo/bar/baz/123"), Equals, true)
+	c.Assert(handler.Match("/foo/bar/baz"), Equals, false)
+	c.Assert(handler.Match("/foo/bar/baz/123"), Equals, true)
 }
 
 // Match matches paths to patterns that have multiple placeholders with the
 // same name.
 func (s *PatternHandlerTest) TestMatchWithDuplicatePlaceholders(c *C) {
 	handler := patternHandler{pattern: "/foo/:name/baz/:name"}
-	c.Assert(handler.match("/foo/bar/baz"), Equals, false)
-	c.Assert(handler.match("/foo/bar/baz/123"), Equals, true)
+	c.Assert(handler.Match("/foo/bar/baz"), Equals, false)
+	c.Assert(handler.Match("/foo/bar/baz/123"), Equals, true)
 }
 
 // Match matches paths to patterns that have placeholders with colons in their
 // name.
 func (s *PatternHandlerTest) TestMatchWithDoubleColonPlaceholder(c *C) {
 	handler := patternHandler{pattern: "/foo/::name"}
-	c.Assert(handler.match("/foo/bar"), Equals, true)
+	c.Assert(handler.Match("/foo/bar"), Equals, true)
 }
 
 // Match matches paths to patterns that have placeholders with a constant
 // prefix string.
 func (s *PatternHandlerTest) TestMatchWithPrefixedPlaceholder(c *C) {
 	handler := patternHandler{pattern: "/foo/x:name"}
-	c.Assert(handler.match("/foo/xbar"), Equals, true)
-	c.Assert(handler.match("/foo/bar"), Equals, false)
+	c.Assert(handler.Match("/foo/xbar"), Equals, true)
+	c.Assert(handler.Match("/foo/bar"), Equals, false)
 }
 
 // Match treats patterns that end in a trailing slash as ending in a splat.
@@ -299,13 +299,13 @@ func (s *PatternHandlerTest) TestMatchWithPrefixedPlaceholder(c *C) {
 // match.
 func (s *PatternHandlerTest) TestMatchWithSplat(c *C) {
 	handler := patternHandler{pattern: "/foo/"}
-	c.Assert(handler.match("/foo/bar/baz"), Equals, true)
-	c.Assert(handler.match("/foo/bar"), Equals, true)
+	c.Assert(handler.Match("/foo/bar/baz"), Equals, true)
+	c.Assert(handler.Match("/foo/bar"), Equals, true)
 }
 
 // Match matches paths to patterns that have placeholders and end in a splat.
 func (s *PatternHandlerTest) TestMatchWithPrefixAndSplat(c *C) {
 	handler := patternHandler{pattern: "/foo/:name/bar/"}
-	c.Assert(handler.match("/foo/name/bar/baz"), Equals, true)
-	c.Assert(handler.match("/foo/name/bar/baz/quux"), Equals, true)
+	c.Assert(handler.Match("/foo/name/bar/baz"), Equals, true)
+	c.Assert(handler.Match("/foo/name/bar/baz/quux"), Equals, true)
 }
