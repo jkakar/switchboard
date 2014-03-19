@@ -27,10 +27,12 @@ func (s *ServiceTest) TestNotify(c *C) {
 	routes := Routes{"GET": []string{"/users", "/user/:id"}}
 	handler := http.HandlerFunc(func(http.ResponseWriter, *http.Request) {})
 	service := NewService("test", s.client, address, routes, handler)
-	record, err := service.Notify()
+	record, err := service.Notify(0)
 
 	key := "test/" + service.ID()
-	response, err := s.client.Get(key, false, true)
+	sort := false
+	recursive := true
+	response, err := s.client.Get(key, sort, recursive)
 	c.Assert(err, IsNil)
 	recordJSON, _ := json.Marshal(record)
 	c.Assert(response.Node.Value, Equals, bytes.NewBuffer(recordJSON).String())

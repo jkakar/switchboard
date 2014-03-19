@@ -48,8 +48,10 @@ func (service *Service) ID() string {
 	return service.id
 }
 
-// Notify registers this service with etcd.
-func (service *Service) Notify() (*ServiceRecord, error) {
+// Notify registers this service with etcd.  The ttl is the time to live for
+// the service record, in seconds.  A ttl of 0 creates a service record that
+// never expires.
+func (service *Service) Notify(ttl uint64) (*ServiceRecord, error) {
 	key := service.namespace + "/" + service.id
 	record := ServiceRecord{
 		ID:      service.id,
@@ -60,7 +62,7 @@ func (service *Service) Notify() (*ServiceRecord, error) {
 		return nil, err
 	}
 	value := bytes.NewBuffer(recordJSON).String()
-	_, err = service.client.Set(key, value, 0)
+	_, err = service.client.Set(key, value, ttl)
 	if err != nil {
 		return nil, err
 	}

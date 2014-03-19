@@ -28,8 +28,8 @@ func (mux *ExchangeServeMux) Add(method, pattern, address string) {
 	mux.rw.Lock()
 	defer mux.rw.Unlock()
 
-	handlers, ok := mux.routes[method]
-	if !ok {
+	handlers, present := mux.routes[method]
+	if !present {
 		handlers = make([]*patternHandler, 0)
 	}
 
@@ -62,8 +62,8 @@ func (mux *ExchangeServeMux) Remove(method, pattern, address string) {
 	mux.rw.Lock()
 	defer mux.rw.Unlock()
 
-	handlers, ok := mux.routes[method]
-	if !ok {
+	handlers, present := mux.routes[method]
+	if !present {
 		return
 	}
 
@@ -93,11 +93,8 @@ func (mux *ExchangeServeMux) Remove(method, pattern, address string) {
 // ServeHTTP dispatches the request to the backend service whose pattern most
 // closely matches the request URL.
 func (mux *ExchangeServeMux) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
-	mux.rw.RLock()
-	defer mux.rw.RUnlock()
-
 	// Attempt to match the request against registered patterns and addresses.
-	addresses, err := mux.match(request)
+	addresses, err := mux.Match(request.Method, request.URL.Path)
 	if err != nil {
 		writer.WriteHeader(http.StatusNotFound)
 		return
@@ -139,11 +136,14 @@ func (mux *ExchangeServeMux) ServeHTTP(writer http.ResponseWriter, request *http
 }
 
 // Match finds backend service addresses capable of handling the request.
-func (mux *ExchangeServeMux) match(request *http.Request) (*[]string, error) {
-	handlers, ok := mux.routes[request.Method]
-	if ok {
+func (mux *ExchangeServeMux) Match(method, path string) (*[]string, error) {
+	mux.rw.RLock()
+	defer mux.rw.RUnlock()
+
+	handlers, present := mux.routes[method]
+	if present {
 		for _, handler := range handlers {
-			if handler.Match(request.URL.Path) {
+			if handler.Match(path) {
 				return &handler.addresses, nil
 			}
 		}
