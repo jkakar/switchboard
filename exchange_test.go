@@ -102,13 +102,13 @@ func (s *ExchangeTest) TestWatchRegisteredService(c *C) {
 	_, err = service.Register(0)
 	c.Assert(err, IsNil)
 
-	// Janky logic to wait for updates from etcd.  This will fail when updates
-	// don't propagate within 500ms. :/
+	// Janky logic to wait for updates from etcd will fail when updates don't
+	// propagate within 500ms.
 	receivedUpdate := false
-	for i := 0; i < 100; i++ {
+	for i := 0; i < 500; i++ {
 		addresses, err := s.mux.Match("GET", "/users")
 		if err != nil {
-			time.Sleep(time.Duration(5) * time.Millisecond)
+			time.Sleep(time.Duration(1) * time.Millisecond)
 			continue
 		} else {
 			c.Assert(addresses, DeepEquals, &[]string{"http://localhost:8080"})
@@ -119,8 +119,8 @@ func (s *ExchangeTest) TestWatchRegisteredService(c *C) {
 	c.Assert(receivedUpdate, Equals, true)
 }
 
-// Watch observes newly registered services in etcd and adds the relevant
-// patterns and addresses to the ExchangeServeMux.
+// Watch observes unregistered services in etcd and removes the relevant
+// patterns and addresses from the ExchangeServeMux.
 func (s *ExchangeTest) TestWatchUnegisteredService(c *C) {
 	// Create the namespace in etcd.
 	_, err := s.client.CreateDir("/test", 0)
@@ -156,13 +156,13 @@ func (s *ExchangeTest) TestWatchUnegisteredService(c *C) {
 	err = service.Unregister()
 	c.Assert(err, IsNil)
 
-	// Janky logic to wait for updates from etcd.  This will fail when updates
-	// don't propagate within 500ms. :/
+	// Janky logic to wait for updates from etcd will fail when updates don't
+	// propagate within 500ms.
 	receivedUpdate := false
-	for i := 0; i < 100; i++ {
+	for i := 0; i < 500; i++ {
 		addresses, err := s.mux.Match("GET", "/users")
 		if err == nil {
-			time.Sleep(time.Duration(5) * time.Millisecond)
+			time.Sleep(time.Duration(1) * time.Millisecond)
 			continue
 		} else {
 			c.Assert(addresses, IsNil)
