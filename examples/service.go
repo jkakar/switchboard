@@ -1,26 +1,41 @@
 package main
 
 import (
-	"bytes"
-	"fmt"
-	"github.com/coreos/go-etcd/etcd"
-	"github.com/jkakar/switchboard"
+	"io"
 	"log"
 	"net/http"
 	"os"
+
+	"github.com/coreos/go-etcd/etcd"
+	"github.com/jkakar/switchboard"
+	"github.com/pat-go/pat.go"
 )
 
 func main() {
+	// Initialize the service.
 	port := os.Getenv("PORT")
+	address := "http://localhost:" + port
 	client := etcd.NewClient([]string{"http://127.0.0.1:4001"})
-	handler := http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
-		buffer := bytes.NewBufferString(fmt.Sprintf("Hello from service on port %v.", port))
-		writer.Write(buffer.Bytes())
-	})
-	service := sb.NewService("example", client, "json-schema", handler)
-	routes := sb.Routes{"get": []string{"/hello"}}
-	err := service.ListenAndServe(fmt.Sprintf(":%v", port), routes)
+	routes := switchboard.Routes{"GET": []string{"/hello/:name"}}
+	handler := pat.New()
+	handler.Get("/hello/:name", http.HandlerFunc(hello))
+	service := switchboard.NewService("example", client, address, routes, handler)
+
+	// Broadcast service presence to etcd.
+	go func() {
+		stop := make(chan bool)
+		service.Broadcast(5, 10, stop)
+	}()
+
+	// Listen for HTTP requests from the exchange.
+	err := http.ListenAndServe("localhost:"+port, handler)
 	if err != nil {
 		log.Fatal(err)
 	}
+}
+
+func hello(w http.ResponseWriter, r *http.Request) {
+	name := r.URL.Query().Get(":name")
+	io.WriteString(w, "Hello, "+name)
+	log.Printf("Responding to /hello/" + name)
 }

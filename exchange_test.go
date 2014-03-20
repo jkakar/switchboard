@@ -24,9 +24,12 @@ func (s *ExchangeTest) SetUpTest(c *C) {
 }
 
 // Init returns an error if the specified namespace doesn't exist in etcd.
-func (s *ExchangeTest) TestInitWithoutServices(c *C) {
+func (s *ExchangeTest) TestInitCreatesNamespaceDirectory(c *C) {
 	err := s.exchange.Init()
-	c.Assert(err.(*etcd.EtcdError).ErrorCode, Equals, 100)
+	c.Assert(err, IsNil)
+	response, err := s.client.Get("test", false, false)
+	c.Assert(err, IsNil)
+	c.Assert(response.Node.Key, Equals, "/test")
 }
 
 // Init returns an error if the specified namespace doesn't exist in etcd.

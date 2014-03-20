@@ -34,9 +34,14 @@ func (exchange *Exchange) Init() error {
 	recursive := true
 	response, err := exchange.client.Get(exchange.namespace, sort, recursive)
 	if err != nil {
-		// TODO(jkakar) We probably want to create a missing namespace if one
-		// doesn't already exist.
-		return err
+		_, err := exchange.client.CreateDir(exchange.namespace, 0)
+		if err != nil {
+			return err
+		}
+		response, err = exchange.client.Get(exchange.namespace, sort, recursive)
+		if err != nil {
+			return err
+		}
 	}
 
 	for _, node := range response.Node.Nodes {

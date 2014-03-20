@@ -10,7 +10,7 @@ import (
 )
 
 func main() {
-	// Initialize an exchange.
+	// Initialize the exchange.
 	client := etcd.NewClient([]string{"http://127.0.0.1:4001"})
 	mux := switchboard.NewExchangeServeMux()
 	exchange := switchboard.NewExchange("example", client, mux)
