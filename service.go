@@ -48,10 +48,10 @@ func (service *Service) ID() string {
 	return service.id
 }
 
-// Notify registers this service with etcd.  The ttl is the time to live for
-// the service record, in seconds.  A ttl of 0 creates a service record that
+// Register adds a service record to etcd.  The ttl is the time to live for
+// the service record, in seconds.  A ttl of 0 registers a service record that
 // never expires.
-func (service *Service) Notify(ttl uint64) (*ServiceRecord, error) {
+func (service *Service) Register(ttl uint64) (*ServiceRecord, error) {
 	key := service.namespace + "/" + service.id
 	record := ServiceRecord{
 		ID:      service.id,
@@ -67,6 +67,18 @@ func (service *Service) Notify(ttl uint64) (*ServiceRecord, error) {
 		return nil, err
 	}
 	return &record, nil
+}
+
+// Unregister destroys the service record in etcd.  An error is returned if
+// the service isn't registered.
+func (service *Service) Unregister() error {
+	key := service.namespace + "/" + service.id
+	recursive := false
+	_, err := service.client.Delete(key, recursive)
+	return err
+}
+
+func (service *Service) Broadcast(stop chan bool) {
 }
 
 // // Register the service and listen for connections.

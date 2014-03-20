@@ -3,17 +3,18 @@ package switchboard
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 
 	"github.com/coreos/go-etcd/etcd"
 )
 
-// Exchange watches for service changes in etcd and update an exchange serve
-// mux.
+// Exchange watches for service changes in etcd and update an
+// ExchangeServeMux.
 type Exchange struct {
 	namespace string            // The root directory in etcd for config files.
 	client    *etcd.Client      // The etcd client.
 	mux       *ExchangeServeMux // The serve mux to keep in sync with etcd.
-	etcdIndex uint64            // Last seen index from etcd.
+	waitIndex uint64            // Wait index to use when watching etcd.
 }
 
 // NewExchange creates a new exchange configured to watch for changes in a
@@ -28,20 +29,66 @@ func (exchange *Exchange) Init() error {
 	recursive := true
 	response, err := exchange.client.Get(exchange.namespace, sort, recursive)
 	if err != nil {
+		// TODO(jkakar) We probably want to create a missing namespace if one
+		// doesn't already exist.
 		return err
 	}
 
 	for _, node := range response.Node.Nodes {
-		var service ServiceRecord
-		json.Unmarshal(bytes.NewBufferString(node.Value).Bytes(), &service)
-		exchange.register(&service)
+		service := exchange.load(&node)
+		exchange.Register(service)
 	}
-	exchange.etcdIndex = response.EtcdIndex
+
+	// We want to watch changes *after* this one.
+	exchange.waitIndex = response.EtcdIndex + 1
 	return nil
 }
 
-// Register adds routes exposed by a service to the exchange serve mux.
-func (exchange *Exchange) register(service *ServiceRecord) {
+func (exchange *Exchange) load(node *etcd.Node) *ServiceRecord {
+	var service ServiceRecord
+	// TODO(jkakar) Check for errors.
+	json.Unmarshal(bytes.NewBufferString(node.Value).Bytes(), &service)
+	return &service
+}
+
+// Watch observes changes in etcd and registers and unregisters services, as
+// necessary, with the ExchangeServeMux.  This blocking call will terminate
+// when a value is received on the stop channel.
+func (exchange *Exchange) Watch(stop chan bool) {
+	receiver := make(chan *etcd.Response)
+	stopped := make(chan bool)
+	go func() {
+		recursive := true
+		// TODO(jkakar) Check for errors.
+		exchange.client.Watch(exchange.namespace, exchange.waitIndex, recursive, receiver, stop)
+		stopped <- true
+	}()
+
+	for {
+		select {
+		case response := <-receiver:
+			fmt.Printf("index:  %v\n", response.EtcdIndex)
+			fmt.Printf("nindex: %v\n", response.Node.ModifiedIndex)
+			fmt.Printf("action: %v\n", response.Action)
+			fmt.Printf("value:  %v\n", response.Node.Value)
+			fmt.Printf("key:    %v\n", response.Node.Key)
+			fmt.Printf("nodes:  %v\n", response.Node.Nodes)
+			fmt.Print("\n")
+			if response.Action == "set" {
+				service := exchange.load(response.Node)
+				exchange.Register(service)
+			} else if response.Action == "delete" {
+				service := exchange.load(response.Node)
+				exchange.Unregister(service)
+			}
+		case <-stopped:
+			return
+		}
+	}
+}
+
+// Register adds routes exposed by a service to the ExchangeServeMux.
+func (exchange *Exchange) Register(service *ServiceRecord) {
 	for method, patterns := range service.Routes {
 		for _, pattern := range patterns {
 			exchange.mux.Add(method, pattern, service.Address)
@@ -49,92 +96,11 @@ func (exchange *Exchange) register(service *ServiceRecord) {
 	}
 }
 
-// func (exchange *Exchange) Watch(stop chan bool) error {
-// 	receiver := make(chan *etcd.Response)
-// 	stopped := make(chan bool)
-// 	go func() {
-// 		recursive := true
-// 		_, err := exchange.client.Watch(
-// 			exchange.namespace, exchange.etcdIndex, recursive, receiver, stop)
-// 		stopped <- true
-// 	}()
-// 	select {
-// 	case response := <-receiver:
-// 		watcher <- exchange.buildManifest(response)
-// 	case <-stopped:
-// 		return nil
-// 	}
-// 	return err
-// }
-
-/*
-import (
-	"bytes"
-	"encoding/json"
-	"github.com/coreos/go-etcd/etcd"
-)
-
-// ServiceManifest is a representation of services registered with an exchange.
-type ServiceManifest struct {
-	Services []*ServiceRecord
-	index    uint64
-}
-
-// Exchange responds to HTTP requests and proxies them to services that are
-// capable to responding to them.
-type Exchange struct {
-	namespace string
-	client    *etcd.Client
-}
-
-// NewExchange creates an exchange that can fetch information about and watch
-// for services changes in etcd.
-func NewExchange(namespace string, client *etcd.Client) *Exchange {
-	return &Exchange{namespace: namespace, client: client}
-}
-
-// ServiceManifest returns information from etcd about the currently
-// registered services.
-func (exchange *Exchange) ServiceManifest() (*ServiceManifest, error) {
-	sort := false
-	recursive := true
-	response, err := exchange.client.Get(exchange.namespace, sort, recursive)
-	if err != nil {
-		return nil, err
+// Unregister removes routes exposed by a service from the ExchangeServeMux.
+func (exchange *Exchange) Unregister(service *ServiceRecord) {
+	for method, patterns := range service.Routes {
+		for _, pattern := range patterns {
+			exchange.mux.Remove(method, pattern, service.Address)
+		}
 	}
-
-	return exchange.buildManifest(response), nil
 }
-
-// buildManifest reads a response from etcd and converts it to a service
-// manifest.
-func (exchange *Exchange) buildManifest(response *etcd.Response) *ServiceManifest {
-	serviceRecords := []*ServiceRecord{}
-	for _, node := range response.Node.Nodes {
-		var serviceRecord ServiceRecord
-		json.Unmarshal(bytes.NewBufferString(node.Value).Bytes(), &serviceRecord)
-		serviceRecords = append(serviceRecords, &serviceRecord)
-	}
-	return &ServiceManifest{
-		Services: serviceRecords,
-		index:    response.EtcdIndex}
-}
-
-// Watch for updates in etcd and send new service manifests to the watcher
-// channel.  Send on the stop channel to stop watching.
-func (exchange *Exchange) Watch(watcher chan *ServiceManifest, stop chan bool) (err error) {
-	receiver := make(chan *etcd.Response)
-	stopped := make(chan bool)
-	go func() {
-		_, err = exchange.client.Watch(exchange.namespace, 0, true, receiver, stop)
-		stopped <- true
-	}()
-	select {
-	case response := <-receiver:
-		watcher <- exchange.buildManifest(response)
-	case <-stopped:
-		return nil
-	}
-	return err
-}
-*/

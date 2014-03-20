@@ -135,15 +135,17 @@ func (mux *ExchangeServeMux) ServeHTTP(writer http.ResponseWriter, request *http
 	writer.Write(body.Bytes())
 }
 
-// Match finds backend service addresses capable of handling the request.
-func (mux *ExchangeServeMux) Match(method, path string) (*[]string, error) {
+// Match finds backend service addresses capable of handling a request for the
+// given HTTP method and URL pattern.  An error is returned if no addresses
+// are registered for the given HTTP method and URL pattern.
+func (mux *ExchangeServeMux) Match(method, pattern string) (*[]string, error) {
 	mux.rw.RLock()
 	defer mux.rw.RUnlock()
 
 	handlers, present := mux.routes[method]
 	if present {
 		for _, handler := range handlers {
-			if handler.Match(path) {
+			if handler.Match(pattern) {
 				return &handler.addresses, nil
 			}
 		}

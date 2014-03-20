@@ -2,6 +2,7 @@ package switchboard
 
 import (
 	"net/http"
+	"time"
 
 	"github.com/coreos/go-etcd/etcd"
 	. "launchpad.net/gocheck"
@@ -34,7 +35,7 @@ func (s *ExchangeTest) TestInit(c *C) {
 	routes := Routes{"GET": []string{"/users", "/user/:id"}}
 	handler := http.HandlerFunc(func(http.ResponseWriter, *http.Request) {})
 	service := NewService("test", s.client, address, routes, handler)
-	_, err := service.Notify(0)
+	_, err := service.Register(0)
 	c.Assert(err, IsNil)
 
 	err = s.exchange.Init()
@@ -47,77 +48,127 @@ func (s *ExchangeTest) TestInit(c *C) {
 	c.Assert(addresses, DeepEquals, &[]string{"http://localhost:8080"})
 }
 
-// // ServiceManifest returns an error if the specified namespace doesn't exist
-// // in etcd.
-// func (s *ExchangeTest) TestServiceManifestWithoutData(c *C) {
-// 	exchange := NewExchange("test", s.client)
-// 	_, err := exchange.ServiceManifest()
-// 	c.Assert(err.(*etcd.EtcdError).ErrorCode, Equals, 100)
-// }
-
-/*
-import (
-	"net/http"
-
-	"github.com/coreos/go-etcd/etcd"
-	. "launchpad.net/gocheck"
-)
-
-type ExchangeTest struct {
-	client *etcd.Client
-}
-
-var _ = Suite(&ExchangeTest{})
-
-func (s *ExchangeTest) SetUpTest(c *C) {
-	s.client = etcd.NewClient([]string{"http://127.0.0.1:4001"})
-	s.client.Delete("test", true)
-}
-
-// ServiceManifest returns an error if the specified namespace doesn't exist
-// in etcd.
-func (s *ExchangeTest) TestServiceManifestWithoutData(c *C) {
-	exchange := NewExchange("test", s.client)
-	_, err := exchange.ServiceManifest()
-	c.Assert(err.(*etcd.EtcdError).ErrorCode, Equals, 100)
-}
-
-// ServiceManifest connects to etcd and discovers currently registered
-// services.
-func (s *ExchangeTest) TestServiceManifest(c *C) {
-	service := NewService("test", s.client, "http://localhost:8080", make(Routes), http.HandlerFunc(func(http.ResponseWriter, *http.Request) {}))
-	serviceRecord, err := service.Notify(0)
-	c.Assert(err, IsNil)
-
-	exchange := NewExchange("test", s.client)
-	manifest, err := exchange.ServiceManifest()
-	c.Assert(len(manifest.Services), Equals, 1)
-	c.Assert(manifest.Services[0], DeepEquals, serviceRecord)
-}
-
-// Watch is disabled when when a message is sent on the stop channel.
+// Watch stops observing changes in etcd when when a bool value is sent to the
+// stop channel.
 func (s *ExchangeTest) TestWatchStops(c *C) {
-	service := NewService("test", s.client, "http://localhost:8080", make(Routes), http.HandlerFunc(func(http.ResponseWriter, *http.Request) {}))
-	_, err := service.Notify(0)
+	address := "http://localhost:8080"
+	routes := Routes{"GET": []string{"/users", "/user/:id"}}
+	handler := http.HandlerFunc(func(http.ResponseWriter, *http.Request) {})
+	service := NewService("test", s.client, address, routes, handler)
+	_, err := service.Register(0)
 	c.Assert(err, IsNil)
 
-	exchange := NewExchange("test", s.client)
 	stop := make(chan bool)
 	stopped := make(chan bool)
 	go func() {
-		update := make(chan *ServiceManifest)
-		err = exchange.Watch(update, stop)
+		err = s.exchange.Init()
 		c.Assert(err, IsNil)
+		s.exchange.Watch(stop)
 		stopped <- true
 	}()
+
 	stop <- true
 	c.Assert(<-stopped, Equals, true)
 }
 
-func (s *ExchangeTest) TestWatch(c *C) {
-	service := NewService("test", s.client, "http://localhost:8080", make(Routes), http.HandlerFunc(func(http.ResponseWriter, *http.Request) {}))
-	_, err := service.Notify(0)
+// Watch observes newly registered services in etcd and adds the relevant
+// patterns and addresses to the ExchangeServeMux.
+func (s *ExchangeTest) TestWatchRegisteredService(c *C) {
+	// Create the namespace in etcd and initialize the exchange.
+	_, err := s.client.CreateDir("/test", 0)
+	c.Assert(err, IsNil)
+	err = s.exchange.Init()
 	c.Assert(err, IsNil)
 
+	// Start the watcher goroutine.
+	stop := make(chan bool)
+	stopped := make(chan bool)
+	go func() {
+		s.exchange.Watch(stop)
+		stopped <- true
+	}()
+
+	// Cleanly shutdown the watcher no matter how the test finishes.
+	defer func() {
+		stop <- true
+		c.Assert(<-stopped, Equals, true)
+	}()
+
+	// Register a new service.
+	address := "http://localhost:8080"
+	routes := Routes{"GET": []string{"/users"}}
+	handler := http.HandlerFunc(func(http.ResponseWriter, *http.Request) {})
+	service := NewService("test", s.client, address, routes, handler)
+	_, err = service.Register(0)
+	c.Assert(err, IsNil)
+
+	// Janky logic to wait for updates from etcd.  This will fail when updates
+	// don't propagate within 500ms. :/
+	receivedUpdate := false
+	for i := 0; i < 100; i++ {
+		addresses, err := s.mux.Match("GET", "/users")
+		if err != nil {
+			time.Sleep(time.Duration(5) * time.Millisecond)
+			continue
+		} else {
+			c.Assert(addresses, DeepEquals, &[]string{"http://localhost:8080"})
+			receivedUpdate = true
+			break
+		}
+	}
+	c.Assert(receivedUpdate, Equals, true)
 }
-*/
+
+// Watch observes newly registered services in etcd and adds the relevant
+// patterns and addresses to the ExchangeServeMux.
+func (s *ExchangeTest) TestWatchUnegisteredService(c *C) {
+	// Create the namespace in etcd.
+	_, err := s.client.CreateDir("/test", 0)
+	c.Assert(err, IsNil)
+
+	// Register a new service.
+	address := "http://localhost:8080"
+	routes := Routes{"GET": []string{"/users"}}
+	handler := http.HandlerFunc(func(http.ResponseWriter, *http.Request) {})
+	service := NewService("test", s.client, address, routes, handler)
+	_, err = service.Register(0)
+	c.Assert(err, IsNil)
+
+	// Initialize the exchange.
+	err = s.exchange.Init()
+	c.Assert(err, IsNil)
+
+	// Start the watcher goroutine.
+	stop := make(chan bool)
+	stopped := make(chan bool)
+	go func() {
+		s.exchange.Watch(stop)
+		stopped <- true
+	}()
+
+	// Cleanly shutdown the watcher no matter how the test finishes.
+	defer func() {
+		stop <- true
+		c.Assert(<-stopped, Equals, true)
+	}()
+
+	// Unregister the service.
+	err = service.Unregister()
+	c.Assert(err, IsNil)
+
+	// Janky logic to wait for updates from etcd.  This will fail when updates
+	// don't propagate within 500ms. :/
+	receivedUpdate := false
+	for i := 0; i < 100; i++ {
+		addresses, err := s.mux.Match("GET", "/users")
+		if err == nil {
+			time.Sleep(time.Duration(5) * time.Millisecond)
+			continue
+		} else {
+			c.Assert(addresses, IsNil)
+			receivedUpdate = true
+			break
+		}
+	}
+	c.Assert(receivedUpdate, Equals, true)
+}
