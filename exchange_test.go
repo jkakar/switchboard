@@ -1,7 +1,6 @@
 package switchboard_test
 
 import (
-	"net/http"
 	"time"
 
 	"github.com/coreos/go-etcd/etcd"
@@ -37,8 +36,7 @@ func (s *ExchangeTest) TestInitCreatesNamespaceDirectory(c *C) {
 func (s *ExchangeTest) TestInit(c *C) {
 	address := "http://localhost:8080"
 	routes := switchboard.Routes{"GET": []string{"/users", "/user/:id"}}
-	handler := http.HandlerFunc(func(http.ResponseWriter, *http.Request) {})
-	service := switchboard.NewService("test", s.client, address, routes, handler)
+	service := switchboard.NewService("test", s.client, address, routes)
 	_, err := service.Register(0)
 	c.Assert(err, IsNil)
 
@@ -57,8 +55,7 @@ func (s *ExchangeTest) TestInit(c *C) {
 func (s *ExchangeTest) TestWatchStops(c *C) {
 	address := "http://localhost:8080"
 	routes := switchboard.Routes{"GET": []string{"/users", "/user/:id"}}
-	handler := http.HandlerFunc(func(http.ResponseWriter, *http.Request) {})
-	service := switchboard.NewService("test", s.client, address, routes, handler)
+	service := switchboard.NewService("test", s.client, address, routes)
 	_, err := service.Register(0)
 	c.Assert(err, IsNil)
 
@@ -101,8 +98,7 @@ func (s *ExchangeTest) TestWatchRegisteredService(c *C) {
 	// Register a new service.
 	address := "http://localhost:8080"
 	routes := switchboard.Routes{"GET": []string{"/users"}}
-	handler := http.HandlerFunc(func(http.ResponseWriter, *http.Request) {})
-	service := switchboard.NewService("test", s.client, address, routes, handler)
+	service := switchboard.NewService("test", s.client, address, routes)
 	_, err = service.Register(0)
 	c.Assert(err, IsNil)
 
@@ -133,8 +129,7 @@ func (s *ExchangeTest) TestWatchUnegisteredService(c *C) {
 	// Register a new service.
 	address := "http://localhost:8080"
 	routes := switchboard.Routes{"GET": []string{"/users"}}
-	handler := http.HandlerFunc(func(http.ResponseWriter, *http.Request) {})
-	service := switchboard.NewService("test", s.client, address, routes, handler)
+	service := switchboard.NewService("test", s.client, address, routes)
 	_, err = service.Register(0)
 	c.Assert(err, IsNil)
 

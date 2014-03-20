@@ -3,7 +3,6 @@ package switchboard_test
 import (
 	"bytes"
 	"encoding/json"
-	"net/http"
 	"time"
 
 	"github.com/coreos/go-etcd/etcd"
@@ -27,8 +26,7 @@ func (s *ServiceTest) SetUpTest(c *C) {
 func (s *ServiceTest) TestRegister(c *C) {
 	address := "http://localhost:8080"
 	routes := switchboard.Routes{"GET": []string{"/users", "/user/:id"}}
-	handler := http.HandlerFunc(func(http.ResponseWriter, *http.Request) {})
-	service := switchboard.NewService("test", s.client, address, routes, handler)
+	service := switchboard.NewService("test", s.client, address, routes)
 	record, err := service.Register(0)
 	c.Assert(err, IsNil)
 
@@ -46,8 +44,7 @@ func (s *ServiceTest) TestRegister(c *C) {
 func (s *ServiceTest) TestRegisterDuplicate(c *C) {
 	address := "http://localhost:8080"
 	routes := switchboard.Routes{"GET": []string{"/users", "/user/:id"}}
-	handler := http.HandlerFunc(func(http.ResponseWriter, *http.Request) {})
-	service := switchboard.NewService("test", s.client, address, routes, handler)
+	service := switchboard.NewService("test", s.client, address, routes)
 	_, err := service.Register(0)
 	c.Assert(err, IsNil)
 	_, err = service.Register(0)
@@ -58,8 +55,7 @@ func (s *ServiceTest) TestRegisterDuplicate(c *C) {
 func (s *ServiceTest) TestUnregisterUnregisteredService(c *C) {
 	address := "http://localhost:8080"
 	routes := switchboard.Routes{"GET": []string{"/users", "/user/:id"}}
-	handler := http.HandlerFunc(func(http.ResponseWriter, *http.Request) {})
-	service := switchboard.NewService("test", s.client, address, routes, handler)
+	service := switchboard.NewService("test", s.client, address, routes)
 	err := service.Unregister()
 	c.Assert(err.(*etcd.EtcdError).ErrorCode, Equals, 100)
 }
@@ -68,8 +64,7 @@ func (s *ServiceTest) TestUnregisterUnregisteredService(c *C) {
 func (s *ServiceTest) TestUnregister(c *C) {
 	address := "http://localhost:8080"
 	routes := switchboard.Routes{"GET": []string{"/users", "/user/:id"}}
-	handler := http.HandlerFunc(func(http.ResponseWriter, *http.Request) {})
-	service := switchboard.NewService("test", s.client, address, routes, handler)
+	service := switchboard.NewService("test", s.client, address, routes)
 	_, err := service.Register(0)
 	c.Assert(err, IsNil)
 	err = service.Unregister()
@@ -87,8 +82,7 @@ func (s *ServiceTest) TestUnregister(c *C) {
 func (s *ServiceTest) TestBroadcastStops(c *C) {
 	address := "http://localhost:8080"
 	routes := switchboard.Routes{"GET": []string{"/users", "/user/:id"}}
-	handler := http.HandlerFunc(func(http.ResponseWriter, *http.Request) {})
-	service := switchboard.NewService("test", s.client, address, routes, handler)
+	service := switchboard.NewService("test", s.client, address, routes)
 
 	stop := make(chan bool)
 	stopped := make(chan bool)
@@ -106,8 +100,7 @@ func (s *ServiceTest) TestBroadcast(c *C) {
 	// Create a new service.
 	address := "http://localhost:8080"
 	routes := switchboard.Routes{"GET": []string{"/users", "/user/:id"}}
-	handler := http.HandlerFunc(func(http.ResponseWriter, *http.Request) {})
-	service := switchboard.NewService("test", s.client, address, routes, handler)
+	service := switchboard.NewService("test", s.client, address, routes)
 
 	// Start broadcasting service changes to etcd.
 	stop := make(chan bool)

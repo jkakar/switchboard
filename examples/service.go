@@ -13,23 +13,22 @@ import (
 )
 
 func main() {
-	// Initialize the service.
+	// Setup HTTP routes and initialize the service.
 	port := os.Getenv("PORT")
 	address := "http://localhost:" + port
 	client := etcd.NewClient([]string{"http://127.0.0.1:4001"})
 	routes := switchboard.Routes{"GET": []string{"/hello/:name"}}
-	handler := pat.New()
-	handler.Get("/hello/:name", Log(http.HandlerFunc(Hello)))
-	service := switchboard.NewService("example", client, address, routes, handler)
+	service := switchboard.NewService("example", client, address, routes)
 
-	// Broadcast service presence to etcd.
+	// Broadcast service presence to etcd every 5 seconds (with a TTL of 10
+	// seconds).
 	go func() {
 		log.Print("Broadcasting service configuration to etcd")
 		stop := make(chan bool)
 		service.Broadcast(5, 10, stop)
 	}()
 
-	// Remove the key when the service receives a SIGTERM and shuts down.
+	// Unregister the service when we receive a SIGTERM and shuts down.
 	interrupt := make(chan os.Signal, 1)
 	signal.Notify(interrupt, os.Interrupt)
 	go func() {
@@ -40,13 +39,17 @@ func main() {
 		}
 	}()
 
-	// Listen for HTTP requests from the exchange.
+	// Setup a handler to process requests for our registered routes and
+	// listen for HTTP requests from the exchange.
+	handler := pat.New()
+	handler.Get("/hello/:name", Log(http.HandlerFunc(Hello)))
 	log.Printf("Listening for HTTP requests on port %v", port)
 	err := http.ListenAndServe("localhost:"+port, handler)
 	if err != nil {
 		log.Print(err)
 	}
 
+	// Unregister the service because we couldn't listen for requests.
 	log.Print("Unregistering service")
 	service.Unregister()
 	log.Print("Shutting down")

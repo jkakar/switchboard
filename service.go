@@ -3,7 +3,6 @@ package switchboard
 import (
 	"bytes"
 	"encoding/json"
-	"net/http"
 	"time"
 
 	"code.google.com/p/go-uuid/uuid"
@@ -29,19 +28,17 @@ type Service struct {
 	client    *etcd.Client // The etcd client.
 	address   string       // The public address for this service.
 	routes    Routes       // The routes handled by this service.
-	handler   http.Handler // An HTTP handler compatible with the JSON schema.
 }
 
 // NewService creates a service that can be registered with etcd to handle
 // requests from an exchange.
-func NewService(namespace string, client *etcd.Client, address string, routes Routes, handler http.Handler) *Service {
+func NewService(namespace string, client *etcd.Client, address string, routes Routes) *Service {
 	return &Service{
 		id:        uuid.NewRandom().String(),
 		namespace: namespace,
 		client:    client,
 		address:   address,
-		routes:    routes,
-		handler:   handler}
+		routes:    routes}
 }
 
 // ID returns the UUID that identifies this service.
