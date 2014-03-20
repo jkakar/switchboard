@@ -49,15 +49,6 @@ func (exchange *Exchange) Init() error {
 	return nil
 }
 
-// Load creates a ServiceRecord from a JSON representation received from
-// etcd.
-func (exchange *Exchange) load(record string) *ServiceRecord {
-	var service ServiceRecord
-	// TODO(jkakar) Check for errors.
-	json.Unmarshal(bytes.NewBufferString(record).Bytes(), &service)
-	return &service
-}
-
 // Watch observes changes in etcd and registers and unregisters services, as
 // necessary, with the ExchangeServeMux.  This blocking call will terminate
 // when a value is received on the stop channel.
@@ -106,4 +97,12 @@ func (exchange *Exchange) Unregister(service *ServiceRecord) {
 			exchange.mux.Remove(method, pattern, service.Address)
 		}
 	}
+}
+
+// Load creates a ServiceRecord instance from a JSON representation.
+func (exchange *Exchange) load(recordJSON string) *ServiceRecord {
+	var service ServiceRecord
+	// TODO(jkakar) Check for errors.
+	json.Unmarshal(bytes.NewBufferString(recordJSON).Bytes(), &service)
+	return &service
 }

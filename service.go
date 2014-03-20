@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"net/http"
+	"time"
 
 	"code.google.com/p/go-uuid/uuid"
 	"github.com/coreos/go-etcd/etcd"
@@ -78,7 +79,21 @@ func (service *Service) Unregister() error {
 	return err
 }
 
-func (service *Service) Broadcast(stop chan bool) {
+// Broadcast registers this service with etcd every interval seconds.  The ttl
+// is the time to live for the service record, in seconds.  This blocking call
+// will terminate when a value is received on the stop channel.
+func (service *Service) Broadcast(interval uint64, ttl uint64, stop chan bool) {
+	// TODO(jkakar) Check for errors.
+	service.Register(ttl)
+	for {
+		select {
+		case <-time.After(time.Duration(interval) * time.Second):
+			// TODO(jkakar) Check for errors.
+			service.Register(ttl)
+		case <-stop:
+			return
+		}
+	}
 }
 
 // // Register the service and listen for connections.
