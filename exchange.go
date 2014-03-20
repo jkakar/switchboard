@@ -34,6 +34,9 @@ func (exchange *Exchange) Init() error {
 	recursive := true
 	response, err := exchange.client.Get(exchange.namespace, sort, recursive)
 	if err != nil {
+		// TODO(jkakar) There's a race here.  Another exchange, starting up at
+		// the same time, could have created the namespace directory already,
+		// in which case this will spuriously fail.
 		_, err := exchange.client.CreateDir(exchange.namespace, 0)
 		if err != nil {
 			return err

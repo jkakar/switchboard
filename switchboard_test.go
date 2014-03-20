@@ -1,8 +1,9 @@
-package switchboard
+package switchboard_test
 
 import (
-	gc "launchpad.net/gocheck"
 	"testing"
+
+	gc "launchpad.net/gocheck"
 )
 
 // Hook up gocheck to the "go test" runner.

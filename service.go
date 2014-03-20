@@ -49,6 +49,17 @@ func (service *Service) ID() string {
 	return service.id
 }
 
+// Address returns the root URL configured for this service.
+func (service *Service) Address() string {
+	return service.address
+}
+
+// Routes returns the map of HTTP methods to URL patterns configured for this
+// service.
+func (service *Service) Routes() Routes {
+	return service.routes
+}
+
 // Register adds a service record to etcd.  The ttl is the time to live for
 // the service record, in seconds.  A ttl of 0 registers a service record that
 // never expires.
@@ -95,46 +106,3 @@ func (service *Service) Broadcast(interval uint64, ttl uint64, stop chan bool) {
 		}
 	}
 }
-
-// // Register the service and listen for connections.
-// func (service *Service) ListenAndServe(address string, routes Routes) error {
-// 	// Listen on address and wait a second to see if an error occurs.
-// 	// TODO(jkakar): This is pretty craptastic.
-// 	listenResult := make(chan error)
-// 	go func() {
-// 		listenResult <- http.ListenAndServe(address, service.handler)
-// 	}()
-// 	select {
-// 	case err := <-listenResult:
-// 		return err
-// 	case <-time.After(time.Second * 1):
-// 	}
-
-// 	// Assume that we're listening correctly and setup the service in etcd.
-// 	key := service.namespace + "/" + service.id
-// 	entry := ServiceRecord{Address: address, Routes: routes}
-// 	entryJSON, err := json.Marshal(entry)
-// 	if err != nil {
-// 		log.Panic(err)
-// 	}
-// 	value := bytes.NewBuffer(entryJSON).String()
-// 	_, err = service.client.Set(key, value, 0)
-// 	if err != nil {
-// 		log.Panic(err)
-// 	}
-// 	log.Printf("Registered service with key: %v", key)
-
-// 	// Remove the key when the service receives a SIGTERM and shuts down.
-// 	interrupt := make(chan os.Signal, 1)
-// 	signal.Notify(interrupt, os.Interrupt)
-// 	go func() {
-// 		for sig := range interrupt {
-// 			service.client.Delete(key, false)
-// 			log.Fatal(sig)
-// 		}
-// 	}()
-
-// 	// Wait forever.
-// 	select {}
-// 	return nil
-// }

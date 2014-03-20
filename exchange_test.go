@@ -1,17 +1,18 @@
-package switchboard
+package switchboard_test
 
 import (
 	"net/http"
 	"time"
 
 	"github.com/coreos/go-etcd/etcd"
+	"github.com/jkakar/switchboard"
 	. "launchpad.net/gocheck"
 )
 
 type ExchangeTest struct {
 	client   *etcd.Client
-	exchange *Exchange
-	mux      *ExchangeServeMux
+	exchange *switchboard.Exchange
+	mux      *switchboard.ExchangeServeMux
 }
 
 var _ = Suite(&ExchangeTest{})
@@ -19,8 +20,8 @@ var _ = Suite(&ExchangeTest{})
 func (s *ExchangeTest) SetUpTest(c *C) {
 	s.client = etcd.NewClient([]string{"http://127.0.0.1:4001"})
 	s.client.Delete("test", true)
-	s.mux = NewExchangeServeMux()
-	s.exchange = NewExchange("test", s.client, s.mux)
+	s.mux = switchboard.NewExchangeServeMux()
+	s.exchange = switchboard.NewExchange("test", s.client, s.mux)
 }
 
 // Init returns an error if the specified namespace doesn't exist in etcd.
@@ -35,9 +36,9 @@ func (s *ExchangeTest) TestInitCreatesNamespaceDirectory(c *C) {
 // Init returns an error if the specified namespace doesn't exist in etcd.
 func (s *ExchangeTest) TestInit(c *C) {
 	address := "http://localhost:8080"
-	routes := Routes{"GET": []string{"/users", "/user/:id"}}
+	routes := switchboard.Routes{"GET": []string{"/users", "/user/:id"}}
 	handler := http.HandlerFunc(func(http.ResponseWriter, *http.Request) {})
-	service := NewService("test", s.client, address, routes, handler)
+	service := switchboard.NewService("test", s.client, address, routes, handler)
 	_, err := service.Register(0)
 	c.Assert(err, IsNil)
 
@@ -55,9 +56,9 @@ func (s *ExchangeTest) TestInit(c *C) {
 // stop channel.
 func (s *ExchangeTest) TestWatchStops(c *C) {
 	address := "http://localhost:8080"
-	routes := Routes{"GET": []string{"/users", "/user/:id"}}
+	routes := switchboard.Routes{"GET": []string{"/users", "/user/:id"}}
 	handler := http.HandlerFunc(func(http.ResponseWriter, *http.Request) {})
-	service := NewService("test", s.client, address, routes, handler)
+	service := switchboard.NewService("test", s.client, address, routes, handler)
 	_, err := service.Register(0)
 	c.Assert(err, IsNil)
 
@@ -99,9 +100,9 @@ func (s *ExchangeTest) TestWatchRegisteredService(c *C) {
 
 	// Register a new service.
 	address := "http://localhost:8080"
-	routes := Routes{"GET": []string{"/users"}}
+	routes := switchboard.Routes{"GET": []string{"/users"}}
 	handler := http.HandlerFunc(func(http.ResponseWriter, *http.Request) {})
-	service := NewService("test", s.client, address, routes, handler)
+	service := switchboard.NewService("test", s.client, address, routes, handler)
 	_, err = service.Register(0)
 	c.Assert(err, IsNil)
 
@@ -131,9 +132,9 @@ func (s *ExchangeTest) TestWatchUnegisteredService(c *C) {
 
 	// Register a new service.
 	address := "http://localhost:8080"
-	routes := Routes{"GET": []string{"/users"}}
+	routes := switchboard.Routes{"GET": []string{"/users"}}
 	handler := http.HandlerFunc(func(http.ResponseWriter, *http.Request) {})
-	service := NewService("test", s.client, address, routes, handler)
+	service := switchboard.NewService("test", s.client, address, routes, handler)
 	_, err = service.Register(0)
 	c.Assert(err, IsNil)
 
