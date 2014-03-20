@@ -59,7 +59,7 @@ func Hello(w http.ResponseWriter, r *http.Request) {
 
 func Log(handler http.Handler) http.Handler {
 	wrapper := func(writer http.ResponseWriter, request *http.Request) {
-		log.Printf("%s %s %s", request.RemoteAddr, request.Method, request.URL)
+		log.Printf("%s %s %s", request.RemoteAddr, request.Method, request.URL.Path)
 		handler.ServeHTTP(writer, request)
 	}
 	return http.HandlerFunc(wrapper)
