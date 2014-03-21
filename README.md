@@ -1,7 +1,6 @@
 # Switchboard
 
-Switchboard is a toolkit for composing an HTTP API out of a collection of
-smaller backend services that each provide support for a set of endpoints.
+Switchboard composes an HTTP API out of a collection of HTTP service backends.
 
 Backend services register themselves with frontend exchanges by pushing their
 configuration into etcd.  This configuration describes HTTP methods and URL
