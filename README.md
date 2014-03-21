@@ -10,7 +10,7 @@ API consumers and route their requests to service backends.  They watch for
 configuration changes in etcd and update their routing rules to add and remove
 routes as services come and go.
 
-![Synthesizer patch bay](http://media.classicrockmagazine.com/wp-content/uploads/2010/05/IsaoTomita.m.jpg)
+![Switchboard operators](http://newdeal.feri.org/images/ae15.gif)
 
 ## Install
 
