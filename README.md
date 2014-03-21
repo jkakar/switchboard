@@ -34,7 +34,7 @@ PORT=5003 go run examples/service.go
 ```
 
 Now you can make requests and watch the exchange randomly pass them to service
-exchanges:
+backends:
 
 ```bash
 curl http://localhost:5000/hello/jane
