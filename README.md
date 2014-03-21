@@ -1,6 +1,6 @@
 # Switchboard
 
-Switchboard composes an HTTP API out of a collection of HTTP service backends.
+Compose an HTTP API out of a collection of HTTP service backends.
 
 Backend services register themselves with frontend exchanges by pushing their
 configuration into etcd.  This configuration describes HTTP methods and URL
