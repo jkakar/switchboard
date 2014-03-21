@@ -21,14 +21,15 @@ func main() {
 	service := switchboard.NewService("example", client, address, routes)
 
 	// Broadcast service presence to etcd every 5 seconds (with a TTL of 10
-	// seconds).
+	// seconds).  If this service crashes the exchange will only attempt to
+	// route requests to it during the TTL window.
 	go func() {
 		log.Print("Broadcasting service configuration to etcd")
 		stop := make(chan bool)
 		service.Broadcast(5, 10, stop)
 	}()
 
-	// Unregister the service when we receive a SIGTERM and shuts down.
+	// Unregister the service in etcd when we receive a SIGTERM.
 	interrupt := make(chan os.Signal, 1)
 	signal.Notify(interrupt, os.Interrupt)
 	go func() {
@@ -47,17 +48,15 @@ func main() {
 	err := http.ListenAndServe("localhost:"+port, handler)
 	if err != nil {
 		log.Print(err)
+		log.Print("Unregistering service")
+		service.Unregister()
+		log.Print("Shutting down")
 	}
-
-	// Unregister the service because we couldn't listen for requests.
-	log.Print("Unregistering service")
-	service.Unregister()
-	log.Print("Shutting down")
 }
 
 func Hello(w http.ResponseWriter, r *http.Request) {
 	name := r.URL.Query().Get(":name")
-	io.WriteString(w, "Hello, "+name)
+	io.WriteString(w, "Hello, "+name+"\n")
 }
 
 func Log(handler http.Handler) http.Handler {

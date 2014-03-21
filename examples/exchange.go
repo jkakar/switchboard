@@ -10,20 +10,23 @@ import (
 )
 
 func main() {
-	// Initialize the exchange.
+	// Initialize the exchange.  The exchange receives requests from API
+	// consumers and passes them on to the appropriate backend service.
 	client := etcd.NewClient([]string{"http://127.0.0.1:4001"})
 	mux := switchboard.NewExchangeServeMux()
 	exchange := switchboard.NewExchange("example", client, mux)
 	exchange.Init()
 
-	// Watch for service changes in etcd.
+	// Watch for service changes in etcd.  The exchange updates service
+	// routing rules based on configuration changes in etcd.
 	go func() {
 		log.Print("Watching for service configuration changes in etcd")
 		stop := make(chan bool)
 		exchange.Watch(stop)
 	}()
 
-	// Listen for HTTP requests.
+	// Listen for HTTP requests from API clients and forward them to the
+	// appropriate service backend.
 	port := os.Getenv("PORT")
 	log.Printf("Listening for HTTP requests on port %v", port)
 	err := http.ListenAndServe("localhost:"+port, Log(mux))
