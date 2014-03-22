@@ -17,6 +17,8 @@ routes as services come and go.
 go get github.com/jkakar/switchboard
 ```
 
+API documentation is at [godoc.org/github.com/jkakar/switchboard](http://godoc.org/github.com/jkakar/switchboard).
+
 ## Example
 
 The `examples/exchange.go` and `examples/service.go` programs demonstrate
