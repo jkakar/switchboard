@@ -35,7 +35,7 @@ PORT=5002 go run examples/service.go
 PORT=5003 go run examples/service.go
 ```
 
-Now you can make requests and watch the exchange randomly pass them to service
+Now you can make requests and watch the exchange pass them to service
 backends:
 
 ```bash
