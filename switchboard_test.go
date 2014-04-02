@@ -3,10 +3,10 @@ package switchboard_test
 import (
 	"testing"
 
-	gc "launchpad.net/gocheck"
+	. "gopkg.in/check.v1"
 )
 
 // Hook up gocheck to the "go test" runner.
 func Test(t *testing.T) {
-	gc.TestingT(t)
+	TestingT(t)
 }

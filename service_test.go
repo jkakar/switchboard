@@ -7,7 +7,7 @@ import (
 
 	"github.com/coreos/go-etcd/etcd"
 	"github.com/jkakar/switchboard"
-	. "launchpad.net/gocheck"
+	. "gopkg.in/check.v1"
 )
 
 type ServiceTest struct {

@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
-	. "launchpad.net/gocheck"
+	. "gopkg.in/check.v1"
 )
 
 type ExchangeServeMuxTest struct{}
